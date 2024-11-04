@@ -82,14 +82,6 @@ jobs:
           deb_url="https://github.com/dayanch96/YTLite/releases/download/v${{ inputs.tweak_version }}/com.dvntm.ytlite_${{ inputs.tweak_version }}_iphoneos-arm.deb"
           wget "$deb_url" --no-verbose -O ${{ github.workspace }}/ytplus.deb
 
-      - name: Clone Open in YouTube (Safari extension)
-        run: |
-          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/CokePokes/YoutubeExtensions/
-          cd YoutubeExtensions
-          git sparse-checkout set --no-cone OpenYoutubeSafariExtension.appex
-          git checkout
-          mv *.appex ${{ github.workspace }}
-
       - name: Clone YouTubeHeader
         run: |
           if [ -d "$THEOS/include/YouTubeHeader" ]; then
@@ -114,11 +106,6 @@ jobs:
           cd ${{ github.workspace }}
           git clone --quiet --depth=1 https://github.com/PoomSmart/YTUHD.git
 
-      - name: Clone Return-YouTube-Dislikes
-        run: |
-          cd ${{ github.workspace }}
-          git clone --quiet --depth=1 https://github.com/PoomSmart/Return-YouTube-Dislikes.git
-
       - name: Build YouPiP
         run: |
           cd ${{ github.workspace }}/YouPiP
@@ -135,18 +122,10 @@ jobs:
         env:
           THEOS: ${{ github.workspace }}/theos
 
-      - name: Build Return-YouTube-Dislikes
-        run: |
-          cd ${{ github.workspace }}/Return-YouTube-Dislikes
-          make clean package DEBUG=0 FINALPACKAGE=1
-          mv packages/*.deb ${{ github.workspace }}/ryd.deb
-        env:
-          THEOS: ${{ github.workspace }}/theos
-
       - name: Inject tweaks into IPA
         run: |
           cyan -i youtube.ipa -o YouTubePlus_${{ inputs.tweak_version }}_Tweaks.ipa \
-            -uwf ytplus.deb OpenYoutubeSafariExtension.appex youpip.deb ytuhd.deb ryd.deb
+            -uwf ytplus.deb youpip.deb ytuhd.deb
 
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2.0.1
