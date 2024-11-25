@@ -1,17 +1,17 @@
-name: YouTube Plus + YouPiP, YTUHD and RYD
+name: '[LINK] YouTube Plus + YouPiP, YTUHD and RYD'
 
 on:
   workflow_dispatch:
     inputs:
       ipa_url:
-        description: "The direct URL to the decrypted IPA file"
+        description: "Direct link to the decrypted IPA file (not to the web-page)"
         default: ""
         required: true
         type: string
 
-      tweak_version:
-        description: "The version of the tweak to use. Enter the version manually from dayanch96/YTLite/releases or leave default"
-        default: "5.0.2"
+      tweak_url:
+        description: "Direct link to the YouTube Plus tweak file (not to the web-page)"
+        default: ""
         required: true
         type: string
 
@@ -81,9 +81,15 @@ jobs:
 
       - name: Download YouTube Plus
         id: download_ytp
+        run: wget "${{ inputs.tweak_url }}" --no-verbose -O ${{ github.workspace }}/ytplus.deb
+
+      - name: Clone Open in YouTube (Safari extension)
         run: |
-          deb_url="https://github.com/dayanch96/YTLite/releases/download/v${{ inputs.tweak_version }}/com.dvntm.ytlite_${{ inputs.tweak_version }}_iphoneos-arm.deb"
-          wget "$deb_url" --no-verbose -O ${{ github.workspace }}/ytplus.deb
+          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/CokePokes/YoutubeExtensions/
+          cd YoutubeExtensions
+          git sparse-checkout set --no-cone OpenYoutubeSafariExtension.appex
+          git checkout
+          mv *.appex ${{ github.workspace }}
 
       - name: Clone YouTubeHeader
         run: |
@@ -109,6 +115,11 @@ jobs:
           cd ${{ github.workspace }}
           git clone --quiet --depth=1 https://github.com/PoomSmart/YTUHD.git
 
+      - name: Clone Return-YouTube-Dislikes
+        run: |
+          cd ${{ github.workspace }}
+          git clone --quiet --depth=1 https://github.com/PoomSmart/Return-YouTube-Dislikes.git
+
       - name: Build YouPiP
         run: |
           cd ${{ github.workspace }}/YouPiP
@@ -125,15 +136,23 @@ jobs:
         env:
           THEOS: ${{ github.workspace }}/theos
 
+      - name: Build Return-YouTube-Dislikes
+        run: |
+          cd ${{ github.workspace }}/Return-YouTube-Dislikes
+          make clean package DEBUG=0 FINALPACKAGE=1
+          mv packages/*.deb ${{ github.workspace }}/ryd.deb
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
       - name: Inject tweaks into IPA
         run: |
-          cyan -i youtube.ipa -o YouTubePlus_${{ inputs.tweak_version }}_Tweaks.ipa \
-            -uwf ytplus.deb youpip.deb ytuhd.deb
+          cyan -i youtube.ipa -o YTPlus_Tweaks.ipa \
+            -uwf ytplus.deb OpenYoutubeSafariExtension.appex youpip.deb ytuhd.deb ryd.deb
 
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2.0.1
         with:
           tag_name: v${{ github.run_number }}
-          name: YouTubePlus v${{ inputs.tweak_version }} + Tweaks (${{ github.run_number }})
-          files: YouTubePlus_${{ inputs.tweak_version }}_Tweaks.ipa
+          name: YouTubePlus + Tweaks (${{ github.run_number }})
+          files: YTPlus_Tweaks.ipa
           draft: true
